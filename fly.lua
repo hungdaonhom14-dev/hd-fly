@@ -203,7 +203,7 @@ local promptFired = {}
 local function enableInstantEPickup()
 	if instantPickupConn then instantPickupConn:Disconnect() end
 	
-	-- PHƯƠNG PHÁP 1: Bắt PromptShown và fire NGAY LẬP TỨC
+	-- CHỈ SET INSTANT - KHÔNG TỰ ĐỘNG FIRE
 	instantPickupConn = ProximityPromptService.PromptShown:Connect(function(prompt)
 		if not ENABLED then return end
 		
@@ -238,29 +238,15 @@ local function enableInstantEPickup()
 					return
 				end
 				
-				-- ✅ PROMPT BÌNH THƯỜNG - FIRE NGAY KHÔNG CHỜ
-				currentPrompt = prompt
-				
-				-- Set instant settings
+				-- ✅ PROMPT BÌNH THƯỜNG - CHỈ SET INSTANT, KHÔNG FIRE
 				prompt.HoldDuration = 0
 				prompt.MaxActivationDistance = 999
 				prompt.RequiresLineOfSight = false
-				
-				-- FIRE NGAY LẬP TỨC - KHÔNG CHỜ ANIMATION
-				fireproximityprompt(prompt, 0, true)
-				
-				-- Đánh dấu đã fire
-				promptFired[prompt] = true
-				
-				-- Reset sau 1 giây
-				task.delay(1, function()
-					promptFired[prompt] = nil
-				end)
 			end)
 		end)
 	end)
 	
-	-- PHƯƠNG PHÁP 2: Quét liên tục và modify prompts
+	-- Quét liên tục và modify prompts
 	task.spawn(function()
 		while ENABLED do
 			pcall(function()
@@ -286,7 +272,6 @@ local function enableInstantEPickup()
 							obj.HoldDuration = 0
 							obj.MaxActivationDistance = 999
 							obj.RequiresLineOfSight = false
-							obj.Style = Enum.ProximityPromptStyle.Custom
 						else
 							obj.Enabled = false
 						end
@@ -297,7 +282,7 @@ local function enableInstantEPickup()
 		end
 	end)
 	
-	-- PHƯƠNG PHÁP 3: Tắt animations
+	-- Tắt animations nhặt đồ
 	task.spawn(function()
 		while ENABLED do
 			pcall(function()
@@ -306,7 +291,6 @@ local function enableInstantEPickup()
 					local humanoid = char:FindFirstChild("Humanoid")
 					if humanoid then
 						for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-							-- Chỉ tắt animation của việc nhặt (thường có "pickup", "collect" trong tên)
 							local animName = track.Animation.AnimationId:lower()
 							if animName:find("pickup") or animName:find("collect") or 
 							   animName:find("grab") or animName:find("take") then
@@ -409,6 +393,16 @@ local function run(points, direction)
 		stopAndCleanup()
 	end
 end
+
+-- ★ BẬT TỰ ĐỘNG CÁC CHỨC NĂNG KHI LOAD SCRIPT
+task.spawn(function()
+	task.wait(1)
+	ENABLED = true
+	deleteVIPObjects()
+	blockPurchaseNotifications()
+	enableInstantEPickup()
+	print("Auto-enabled: VIP Delete + Block UI + Instant Pickup")
+end)
 
 -- GUI
 local gui = Instance.new("ScreenGui", PlayerGui)
